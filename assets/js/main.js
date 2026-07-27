@@ -1300,7 +1300,7 @@
                     <p class="text-sm font-medium mt-1" style="color:#727785;">Unidades em Estoque</p>
                     <button onclick="downloadEstrelaExcel()" class="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90" style="background:linear-gradient(135deg, #fbbc05 0%, #f9a825 100%); color:#261a00; box-shadow:0 4px 12px rgba(251,188,5,0.3);">
                         <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings:'FILL' 1;">download</span>
-                        Baixar Controle Estoque UHE Estrela
+                        Baixar Controle de Estoque
                     </button>
                 </div>
                 <!-- KPI: Produtos (SKUs) -->
