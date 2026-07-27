@@ -9494,15 +9494,6 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             }
         });
 
-        // 🧪 MÓDULO DE TESTE TEMPORÁRIO DE INTEGRAÇÃO (R$ 1,00) - REMOVER EM PRODUÇÃO
-        // Simula a aprovação imediata do pagamento (R$ 1,00 ou qualquer plano) para validação do pós-venda.
-        document.getElementById('test-simulate-approval-btn')?.addEventListener('click', async () => {
-            const months = selectedPlanMonths || 1;
-            const price = selectedPlanPrice || 1.00;
-            await activateUserSubscription(months, `Simulação de Teste Interno (R$ ${price.toFixed(2)})`);
-            showToast(`🧪 Teste de Integração (R$ ${price.toFixed(2)}): Pagamento APROVADO! Acesso liberado por +${months * 30} dias.`);
-        });
-
         // Seletor de Período dos Planos (1, 3, 6, 12 meses)
         document.querySelectorAll('.plan-duration-btn').forEach(btn => {
             btn.addEventListener('click', () => {
