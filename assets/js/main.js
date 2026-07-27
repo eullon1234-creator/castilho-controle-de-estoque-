@@ -9037,13 +9037,55 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                             </span>
                         </label>
                     </div>
-                    <button class="save-user-perms-btn w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95" data-uid="${user.id}" style="background:linear-gradient(135deg,#E52320,#dc2626);box-shadow:0 2px 8px rgba(229,35,32,0.25);">
-                        <span class="material-symbols-outlined align-middle" style="font-size:16px;">save</span>
-                        Salvar Permissões e Aprovar
-                    </button>
+                    <div class="flex gap-2">
+                        <button class="save-user-perms-btn flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95" data-uid="${user.id}" style="background:linear-gradient(135deg,#E52320,#dc2626);box-shadow:0 2px 8px rgba(229,35,32,0.25);">
+                            <span class="material-symbols-outlined align-middle" style="font-size:16px;">save</span>
+                            Salvar Permissões e Aprovar
+                        </button>
+                        <button class="delete-user-account-btn px-3 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-1" data-uid="${user.id}" data-name="${user.displayName || user.id}" style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2);" title="Excluir esta conta">
+                            <span class="material-symbols-outlined" style="font-size:18px;">delete_forever</span>
+                            <span class="hidden sm:inline">Excluir Conta</span>
+                        </button>
+                    </div>
                 </div>`;
             }).join('');
         };
+
+        // Excluir conta de usuário (exclusivo para Diego/Admin)
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.delete-user-account-btn');
+            if (!btn || userRole !== 'admin') return;
+
+            const uid = btn.dataset.uid;
+            const name = btn.dataset.name || uid;
+
+            if (!confirm(`⚠️ Tem certeza que deseja excluir a conta de "${name}"?\nEsta ação é permanente e o funcionário perderá o acesso.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin" style="font-size:18px;">sync</span> Excluindo...`;
+
+            // 1. Remover do Firestore
+            try {
+                const userRef = doc(db, `/artifacts/${appId}/public/data/users`, uid);
+                await deleteDoc(userRef);
+            } catch (err) {
+                console.warn('Não foi possível excluir do Firestore:', err);
+            }
+
+            // 2. Remover do localStorage
+            try {
+                const localUsers = getLocalUsers();
+                delete localUsers[uid];
+                localStorage.setItem('castilho_local_users', JSON.stringify(localUsers));
+            } catch (err) {
+                console.error('Erro ao remover usuário local:', err);
+            }
+
+            showToast(`🗑️ Conta de "${name}" foi excluída com sucesso.`);
+            await renderAdminPanel();
+        });
 
         // Salvar permissões de um usuário
         document.addEventListener('click', async (e) => {
