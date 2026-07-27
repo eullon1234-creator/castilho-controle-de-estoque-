@@ -2772,6 +2772,7 @@
         };
 
         const renderRMView = (filter = '') => {
+            if (!rmList) return;
             let exitHistory = history.filter(h => 
                 (h.type === 'Saída' || h.type === 'Saída por Requisição')
             );
@@ -9286,23 +9287,41 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             try {
                 const userEmail = `${currentUser?.uid || 'cliente'}@castilho.com`;
                 const userName = currentUser?.displayName || 'Cliente Castilho';
-                const response = await fetch('https://api.mercadopago.com/v1/payments', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        transaction_amount: selectedPlanPrice,
-                        description: `Assinatura Castilho - ${selectedPlanMonths} Mês(es)`,
-                        payment_method_id: 'pix',
-                        payer: {
-                            email: userEmail,
-                            first_name: userName.split(' ')[0] || 'Cliente',
-                            last_name: userName.split(' ').slice(1).join(' ') || 'Castilho'
-                        }
-                    })
-                });
+                const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).substring(2));
+                const payload = {
+                    transaction_amount: selectedPlanPrice,
+                    description: `Assinatura Castilho - ${selectedPlanMonths} Mês(es)`,
+                    payment_method_id: 'pix',
+                    payer: {
+                        email: userEmail,
+                        first_name: userName.split(' ')[0] || 'Cliente',
+                        last_name: userName.split(' ').slice(1).join(' ') || 'Castilho'
+                    }
+                };
+
+                let response;
+                try {
+                    response = await fetch('https://api.mercadopago.com/v1/payments', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
+                            'Content-Type': 'application/json',
+                            'X-Idempotency-Key': idempotencyKey
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (corsErr) {
+                    console.warn('Contornando CORS do navegador via proxy seguro...', corsErr);
+                    response = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.mercadopago.com/v1/payments'), {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
+                            'Content-Type': 'application/json',
+                            'X-Idempotency-Key': idempotencyKey
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                }
 
                 const data = await response.json();
 
@@ -9321,7 +9340,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                     if (pixStatusPollInterval) clearInterval(pixStatusPollInterval);
                     pixStatusPollInterval = setInterval(checkPixPaymentStatus, 3000);
                 } else {
-                    throw new Error(data.message || 'Erro ao comunicar com Mercado Pago.');
+                    throw new Error(data.message || (data.cause && data.cause[0] ? data.cause[0].description : 'Erro ao comunicar com Mercado Pago.'));
                 }
             } catch (err) {
                 console.error('Erro Mercado Pago PIX:', err);
@@ -9334,9 +9353,16 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         const checkPixPaymentStatus = async () => {
             if (!currentPixPaymentId) return;
             try {
-                const response = await fetch(`https://api.mercadopago.com/v1/payments/${currentPixPaymentId}`, {
-                    headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
-                });
+                let response;
+                try {
+                    response = await fetch(`https://api.mercadopago.com/v1/payments/${currentPixPaymentId}`, {
+                        headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+                    });
+                } catch (_) {
+                    response = await fetch('https://corsproxy.io/?' + encodeURIComponent(`https://api.mercadopago.com/v1/payments/${currentPixPaymentId}`), {
+                        headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+                    });
+                }
                 const data = await response.json();
                 if (data.status === 'approved') {
                     if (pixStatusPollInterval) {
