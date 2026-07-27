@@ -799,7 +799,7 @@
         const updateAppSettingsUI = (settings) => {
             appSettings = { ...appSettings, ...settings };
             const defaultAppName = 'Castilho';
-            const nameToUse = appSettings.appName && appSettings.appName !== 'UHE Estrela' && appSettings.appName !== 'PCH Taboca' && appSettings.appName !== 'Cartilharia' ? appSettings.appName : defaultAppName;
+            const nameToUse = appSettings.appName && appSettings.appName !== 'Obra Porto Velho' && appSettings.appName !== 'Obra Sorriso' && appSettings.appName !== 'Cartilharia' ? appSettings.appName : defaultAppName;
             document.getElementById('app-title').textContent = nameToUse;
             document.title = `${nameToUse} - Controle de Estoque`;
             const sidebarTitle = document.getElementById('sidebar-app-title');
@@ -912,7 +912,7 @@
         };
 
         // --- Lógica de Autenticação e Inicialização (sem Firebase Auth) ---
-        const BUILTIN_ADMINS = ['diego', 'admin', 'castilho', 'cartilharia', 'uhe_estrela', 'pch_taboca'];
+        const BUILTIN_ADMINS = ['diego', 'admin', 'castilho', 'cartilharia', 'obra_porto_velho', 'obra_sorriso'];
 
         const savedSession = localStorage.getItem('appUser');
         if (savedSession) {
@@ -982,7 +982,7 @@
                 const exists = doc && (typeof doc.exists === 'function' ? doc.exists() : doc.exists);
                 if (exists && doc.data()) {
                     const data = doc.data();
-                    if (data.appName === 'Estoque Taboca' || data.appName === 'Estoque Estrela' || data.appName === 'UHE Estrela' || data.appName === 'PCH Taboca' || data.appName === 'Cartilharia') {
+                    if (data.appName === 'Estoque Taboca' || data.appName === 'Estoque Estrela' || data.appName === 'Obra Porto Velho' || data.appName === 'Obra Sorriso' || data.appName === 'Cartilharia') {
                         data.appName = 'Castilho';
                         setDoc(settingsDocRef, { appName: 'Castilho' }, { merge: true }).catch(() => {});
                     }
@@ -2901,8 +2901,8 @@
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium">Obra</label>
                             <select id="req-obra" class="w-full mt-1 p-2 border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500" required>
-                                <option value="TABOCA">TABOCA</option>
-                                <option value="ESTRELA" selected>ESTRELA</option>
+                                <option value="SORRISO">SORRISO</option>
+                                <option value="PORTO VELHO" selected>PORTO VELHO</option>
                             </select>
                         </div>
                     </div>
@@ -4117,7 +4117,7 @@
 
             const stamp = new Date().toISOString().slice(0, 10);
             const agora = new Date().toLocaleString('pt-BR');
-            const obraNames = { uhe_estrela: 'UHE Estrela', pch_taboca: 'PCH Taboca' };
+            const obraNames = { obra_porto_velho: 'Obra Porto Velho', obra_sorriso: 'Obra Sorriso' };
             const obraNome = obraNames[currentObraId] || currentObraId || 'Obra';
             const obraSlug = (currentObraId || 'obra').replace(/[^a-z0-9_]/gi, '_');
             const marginPct = 20;
@@ -4828,8 +4828,8 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                 const BUILTIN_USERS = {
                     'castilho': { displayName: 'CASTILHO', role: 'admin', pwd: '60218', obraId: 'castilho' },
                     'cartilharia': { displayName: 'CASTILHO', role: 'admin', pwd: '60218', obraId: 'castilho' },
-                    'uhe_estrela': { displayName: 'CASTILHO', role: 'admin', pwd: '60218', obraId: 'castilho' },
-                    'pch_taboca': { displayName: 'CASTILHO', role: 'admin', pwd: '60218', obraId: 'castilho' },
+                    'obra_porto_velho': { displayName: 'CASTILHO', role: 'admin', pwd: '60218', obraId: 'castilho' },
+                    'obra_sorriso': { displayName: 'CASTILHO', role: 'admin', pwd: '60218', obraId: 'castilho' },
                     'diego': { displayName: 'Diego', role: 'admin', pwd: '0192', obraId: 'castilho' },
                     'admin': { displayName: 'Diego (Admin)', role: 'admin', pwd: '0192', obraId: 'castilho' }
                 };
@@ -4955,7 +4955,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
 
             try {
                 const userId = normalizeUserId(name);
-                const BUILTIN_NAMES = ['diego', 'admin', 'castilho', 'cartilharia', 'uhe_estrela', 'pch_taboca'];
+                const BUILTIN_NAMES = ['diego', 'admin', 'castilho', 'cartilharia', 'obra_porto_velho', 'obra_sorriso'];
                 if (BUILTIN_NAMES.includes(userId)) {
                     if (loginError) { loginError.textContent = 'Este nome de usuário é reservado ao sistema. Escolha outro nome.'; loginError.classList.remove('hidden'); }
                     if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = 'Criar Conta'; }

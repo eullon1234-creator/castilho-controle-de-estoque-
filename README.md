@@ -1,3 +1,7 @@
+MANDEI 
+
+ 
+
 # 🏗️ Castilho - Controle de Estoque & Almoxarifado
 
 Aplicação Web completa e moderna para controle de estoque, ferramentas e almoxarifado da **Castilho**, com controle de permissões por usuário, gestão de assinaturas via Mercado Pago, geração de relatórios e suporte PWA offline.
@@ -39,16 +43,18 @@ O **Castilho - Controle de Estoque** foi projetado para gestão rápida de cante
 ## 🚀 Como Executar Localmente
 
 1. Clone este repositório:
+
 ```bash
 git clone https://github.com/eullon1234-creator/castilho-controle-de-estoque-.git
 ```
 
 2. Abra a pasta no seu editor (ex.: VS Code).
-
 3. Inicie um servidor local HTTP simples:
+
 ```bash
 python -m http.server 8080
 ```
+
 Ou use a extensão **Live Server** no VS Code.
 
 4. Acesse no seu navegador: `http://localhost:8080/index.html`
@@ -61,7 +67,7 @@ Ou use a extensão **Live Server** no VS Code.
 2. Vá em **Settings** > **Pages**.
 3. Em **Build and deployment** > **Source**, selecione `Deploy from a branch` (ou `GitHub Actions`).
 4. Selecione a branch `main` e a pasta `/(root)`.
-5. Clique em **Save**. O link público será gerado em:  
+5. Clique em **Save**. O link público será gerado em:
    `https://eullon1234-creator.github.io/castilho-controle-de-estoque-/`
 
 ---
