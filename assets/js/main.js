@@ -566,7 +566,7 @@
                     <span class="material-symbols-outlined" style="font-size:18px;">schedule</span>
                     <span>Sua conta está <strong>aguardando aprovação</strong>.</span>
                     <button id="banner-pay-btn" type="button" style="background:#fff;color:#007eb5;border:none;padding:5px 14px;border-radius:8px;font-weight:800;font-size:0.75rem;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);transition:all 0.2s;">
-                        ⚡ Ativar Assinatura por R$ 24,99/mês (PIX)
+                        ⚡ Ativar Assinatura a partir de R$ 45,00/mês (PIX)
                     </button>
                 `;
                 document.body.prepend(banner);
@@ -9237,7 +9237,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         let currentPixPaymentId = null;
         let pixStatusPollInterval = null;
         let selectedPlanMonths = 1;
-        let selectedPlanPrice = 24.99;
+        let selectedPlanPrice = 45.00;
 
         const openPaymentModal = () => {
             const backdrop = document.getElementById('payment-modal-backdrop');
@@ -9427,7 +9427,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                 btn.style.boxShadow = '0 0 0 2px rgba(0,158,227,0.2)';
 
                 selectedPlanMonths = parseInt(btn.dataset.months) || 1;
-                selectedPlanPrice = parseFloat(btn.dataset.price) || 24.99;
+                selectedPlanPrice = parseFloat(btn.dataset.price) || 45.00;
             });
         });
 

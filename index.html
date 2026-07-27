@@ -130,7 +130,7 @@
             <div class="flex items-center gap-2">
                 <button id="open-subscription-modal-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition hover:scale-105" style="background:linear-gradient(135deg,rgba(0,158,227,0.1),rgba(0,126,181,0.06)); color:#009ee3; border:1px solid rgba(0,158,227,0.2);" title="Ver plano de assinatura Mercado Pago">
                     <span class="material-symbols-outlined" style="font-size:18px;color:#009ee3;">verified</span>
-                    <span class="hidden sm:inline">Assinatura R$ 24,99</span>
+                    <span class="hidden sm:inline">Assinatura R$ 45,00</span>
                 </button>
                 <button id="pwa-install-btn" class="pwa-install-btn hidden items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition" title="Instalar app no dispositivo">
                     <span class="material-symbols-outlined" style="font-size:18px;">download_for_offline</span>
@@ -320,7 +320,7 @@
                                             🟢 Ativa (Plano Mensal)
                                         </span>
                                     </div>
-                                    <p class="text-xs text-slate-300 mt-0.5">Mercado Pago PIX • Valor: <strong class="text-white">R$ 24,99 / mês</strong></p>
+                                    <p class="text-xs text-slate-300 mt-0.5">Mercado Pago PIX • Valor: <strong class="text-white">R$ 45,00 / mês</strong></p>
                                 </div>
                             </div>
 
@@ -2376,25 +2376,34 @@
                 <p class="text-xs text-slate-500 mt-1">Liberte acesso completo ao sistema de almoxarifado</p>
             </div>
 
+            <!-- Mensagem de incentivo aos descontos -->
+            <div class="mb-4 p-3 rounded-2xl text-center" style="background:linear-gradient(135deg,rgba(0,189,174,0.1),rgba(0,158,227,0.06));border:1px solid rgba(0,189,174,0.25);">
+                <p class="text-xs font-extrabold text-emerald-800 flex items-center justify-center gap-1">
+                    <span class="material-symbols-outlined" style="font-size:16px;color:#00bdae;">local_fire_department</span>
+                    Quanto maior o período, MAIOR O SEU DESCONTO!
+                </p>
+                <p class="text-[0.7rem] text-slate-600 mt-0.5">Economize até <strong class="text-emerald-700">R$ 160,00</strong> nos planos de mais tempo.</p>
+            </div>
+
             <!-- Escolha do Período -->
             <div class="mb-5">
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 text-center">Escolha o Período da Assinatura</label>
                 <div class="grid grid-cols-2 gap-2" id="plan-duration-select">
-                    <button type="button" class="plan-duration-btn active p-3 rounded-2xl border text-left transition-all" data-months="1" data-price="24.99" style="border-color:#009ee3;background:rgba(0,158,227,0.06);box-shadow:0 0 0 2px rgba(0,158,227,0.2);">
+                    <button type="button" class="plan-duration-btn active p-3 rounded-2xl border text-left transition-all" data-months="1" data-price="45.00" style="border-color:#009ee3;background:rgba(0,158,227,0.06);box-shadow:0 0 0 2px rgba(0,158,227,0.2);">
                         <p class="text-xs font-bold text-slate-900">1 Mês (Mensal)</p>
-                        <p class="text-sm font-extrabold text-sky-600">R$ 24,99</p>
+                        <p class="text-sm font-extrabold text-sky-600">R$ 45,00</p>
                     </button>
-                    <button type="button" class="plan-duration-btn p-3 rounded-2xl border text-left transition-all" data-months="3" data-price="69.90" style="border-color:#e2e8f0;background:#f8fafc;">
-                        <p class="text-xs font-bold text-slate-900">3 Meses <span class="text-[0.65rem] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-extrabold">Desconto</span></p>
-                        <p class="text-sm font-extrabold text-slate-700">R$ 69,90</p>
+                    <button type="button" class="plan-duration-btn p-3 rounded-2xl border text-left transition-all" data-months="3" data-price="115.00" style="border-color:#e2e8f0;background:#f8fafc;">
+                        <p class="text-xs font-bold text-slate-900">3 Meses <span class="text-[0.65rem] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-extrabold">Economize R$ 20</span></p>
+                        <p class="text-sm font-extrabold text-slate-700">R$ 115,00</p>
                     </button>
-                    <button type="button" class="plan-duration-btn p-3 rounded-2xl border text-left transition-all" data-months="6" data-price="129.90" style="border-color:#e2e8f0;background:#f8fafc;">
+                    <button type="button" class="plan-duration-btn p-3 rounded-2xl border text-left transition-all" data-months="6" data-price="210.00" style="border-color:#e2e8f0;background:#f8fafc;">
                         <p class="text-xs font-bold text-slate-900">6 Meses (Semestral)</p>
-                        <p class="text-sm font-extrabold text-slate-700">R$ 129,90</p>
+                        <p class="text-sm font-extrabold text-slate-700">R$ 210,00 <span class="text-[0.65rem] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-bold">R$ 60 OFF</span></p>
                     </button>
-                    <button type="button" class="plan-duration-btn p-3 rounded-2xl border text-left transition-all" data-months="12" data-price="239.90" style="border-color:#e2e8f0;background:#f8fafc;">
+                    <button type="button" class="plan-duration-btn p-3 rounded-2xl border text-left transition-all" data-months="12" data-price="380.00" style="border-color:#e2e8f0;background:#f8fafc;">
                         <p class="text-xs font-bold text-slate-900">12 Meses (Anual)</p>
-                        <p class="text-sm font-extrabold text-slate-700">R$ 239,90</p>
+                        <p class="text-sm font-extrabold text-slate-700">R$ 380,00 <span class="text-[0.65rem] bg-amber-100 text-amber-800 px-1 py-0.5 rounded font-extrabold">🔥 R$ 160 OFF</span></p>
                     </button>
                 </div>
             </div>
