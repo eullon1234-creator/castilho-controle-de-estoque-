@@ -9253,6 +9253,39 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         let selectedPlanMonths = 1;
         let selectedPlanPrice = 45.00;
 
+        // Função auxiliar: faz POST na API do MP passando por proxies CORS em sequência
+        // GitHub Pages não permite chamadas diretas ao Mercado Pago devido ao CORS
+        const mpApiFetch = async (endpoint, options = {}) => {
+            const MP_API_BASE = 'https://api.mercadopago.com';
+            const targetUrl = `${MP_API_BASE}${endpoint}`;
+            const CORS_PROXIES = [
+                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            ];
+
+            const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+            // Localhost: tenta direto primeiro
+            if (isLocalhost) {
+                try {
+                    const r = await fetch(targetUrl, options);
+                    if (r.ok) return r;
+                } catch (_) {}
+            }
+
+            // GitHub Pages e outros: usa proxies em sequência
+            for (const proxyFn of CORS_PROXIES) {
+                try {
+                    const proxyUrl = proxyFn(targetUrl);
+                    const r = await fetch(proxyUrl, options);
+                    if (r.ok) return r;
+                } catch (_) {}
+            }
+
+            // Última tentativa: direto (pode falhar por CORS em prod)
+            return fetch(targetUrl, options);
+        };
+
         const openPaymentModal = () => {
             const backdrop = document.getElementById('payment-modal-backdrop');
             const modal = document.getElementById('payment-modal');
@@ -9366,7 +9399,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
 
                 let response;
                 try {
-                    response = await fetch('https://api.mercadopago.com/v1/payments', {
+                    response = await mpApiFetch('/v1/payments', {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
@@ -9375,17 +9408,8 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                         },
                         body: JSON.stringify(payload)
                     });
-                } catch (corsErr) {
-                    console.warn('Contornando CORS do navegador via proxy seguro...', corsErr);
-                    response = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.mercadopago.com/v1/payments'), {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
-                            'Content-Type': 'application/json',
-                            'X-Idempotency-Key': idempotencyKey
-                        },
-                        body: JSON.stringify(payload)
-                    });
+                } catch (fetchErr) {
+                    throw new Error('Não foi possível conectar com o Mercado Pago: ' + fetchErr.message);
                 }
 
                 const data = await response.json();
@@ -9426,16 +9450,9 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         const checkPixPaymentStatus = async () => {
             if (!currentPixPaymentId) return;
             try {
-                let response;
-                try {
-                    response = await fetch(`https://api.mercadopago.com/v1/payments/${currentPixPaymentId}`, {
-                        headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
-                    });
-                } catch (_) {
-                    response = await fetch('https://corsproxy.io/?' + encodeURIComponent(`https://api.mercadopago.com/v1/payments/${currentPixPaymentId}`), {
-                        headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
-                    });
-                }
+                const response = await mpApiFetch(`/v1/payments/${currentPixPaymentId}`, {
+                    headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+                });
                 const data = await response.json();
                 if (data.status === 'approved') {
                     if (pixStatusPollInterval) {
