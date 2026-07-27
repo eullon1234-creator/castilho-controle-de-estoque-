@@ -9322,7 +9322,20 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             userCustomPermissions = fullPermissions;
 
             const addedDays = (months || 1) * 30;
-            const newExpiresAt = new Date(Date.now() + addedDays * 24 * 60 * 60 * 1000).toISOString();
+
+            // ✅ ACUMULA dias: se ainda tem dias restantes, soma ao vencimento atual (não reseta)
+            // Ex: 20 dias restantes + pagou 30 dias = vence daqui a 50 dias
+            const existingExpiry = currentUser?.subscriptionExpiresAt
+                ? new Date(currentUser.subscriptionExpiresAt)
+                : (localStorage.getItem('castilho_sub_expires_at')
+                    ? new Date(localStorage.getItem('castilho_sub_expires_at'))
+                    : null);
+
+            const baseDate = existingExpiry && existingExpiry > new Date()
+                ? existingExpiry   // tem saldo: soma em cima do vencimento atual
+                : new Date();      // vencido ou sem assinatura: começa do zero
+
+            const newExpiresAt = new Date(baseDate.getTime() + addedDays * 24 * 60 * 60 * 1000).toISOString();
 
             // 1. Atualizar Firestore (apenas para usuários não-admin, pois admin é builtin)
             if (preservedRole !== 'admin') {
