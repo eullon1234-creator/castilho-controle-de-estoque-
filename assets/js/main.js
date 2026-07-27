@@ -9237,11 +9237,17 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         });
 
         // ───────────────────────────────────────────────
-        // 💳 INTEGRANTE MERCADO PAGO (ASSINATURA E MULTI-PLANOS)
+        // 💳 MERCADO PAGO - CONFIGURAÇÃO E CREDENCIAIS DE API (ISOLADO PARA PRODUÇÃO)
         // ───────────────────────────────────────────────
+        // Insira aqui as credenciais oficiais da Castilho obtidas no Painel de Desenvolvedores:
+        // https://www.mercadopago.com.br/developers/panel/credentials
+        const MERCADO_PAGO_CONFIG = {
+            publicKey: 'TEST-fa4f6793-f524-4410-a408-87ae5332687b',
+            accessToken: 'TEST-4009558881826666-072715-016e77a4df9949059f520b6f4fd57e7f-1006578628'
+        };
 
-        const MP_PUBLIC_KEY = 'TEST-fa4f6793-f524-4410-a408-87ae5332687b';
-        const MP_ACCESS_TOKEN = 'TEST-4009558881826666-072715-016e77a4df9949059f520b6f4fd57e7f-1006578628';
+        const MP_PUBLIC_KEY = MERCADO_PAGO_CONFIG.publicKey;
+        const MP_ACCESS_TOKEN = MERCADO_PAGO_CONFIG.accessToken;
         let currentPixPaymentId = null;
         let pixStatusPollInterval = null;
         let selectedPlanMonths = 1;
@@ -9269,6 +9275,59 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                 clearInterval(pixStatusPollInterval);
                 pixStatusPollInterval = null;
             }
+        };
+
+        // Função de Ativação / Pós-Venda Unificada (Assinatura e Testes)
+        const activateUserSubscription = async (months = 1, paymentMethodName = 'PIX Mercado Pago') => {
+            if (!currentUser) return;
+            const uid = currentUser.uid;
+            const fullPermissions = { canEntry: true, canEdit: true, canDelete: true, canReq: true };
+            userCustomPermissions = fullPermissions;
+
+            const addedDays = (months || 1) * 30;
+            const newExpiresAt = new Date(Date.now() + addedDays * 24 * 60 * 60 * 1000).toISOString();
+
+            // 1. Atualizar Firestore
+            try {
+                const userRef = doc(db, `/artifacts/${appId}/public/data/users`, uid);
+                await setDoc(userRef, {
+                    aprovado: true,
+                    role: 'operador',
+                    permissions: fullPermissions,
+                    subscriptionActive: true,
+                    subscriptionPaidAt: new Date().toISOString(),
+                    subscriptionExpiresAt: newExpiresAt,
+                    lastPaymentMethod: paymentMethodName
+                }, { merge: true });
+            } catch (_) {}
+
+            // 2. Atualizar local
+            const localUsers = getLocalUsers();
+            if (localUsers[uid]) {
+                localUsers[uid].aprovado = true;
+                localUsers[uid].permissions = fullPermissions;
+                localUsers[uid].subscriptionExpiresAt = newExpiresAt;
+                saveLocalUser(uid, localUsers[uid]);
+            }
+
+            localStorage.setItem('castilho_sub_paid_at', new Date().toISOString());
+            localStorage.setItem('castilho_sub_expires_at', newExpiresAt);
+
+            // 3. Atualizar Estado em Memória
+            currentUser.pendingApproval = false;
+            currentUser.role = 'operador';
+            userRole = 'operador';
+            localStorage.setItem('appUser', JSON.stringify({
+                ...currentUser,
+                role: 'operador',
+                pendingApproval: false,
+                permissions: fullPermissions,
+                subscriptionExpiresAt: newExpiresAt
+            }));
+
+            closePaymentModal();
+            updateUIBasedOnPermissions();
+            renderAdminPanel();
         };
 
         const generatePixPayment = async () => {
@@ -9326,9 +9385,17 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                 const data = await response.json();
 
                 if (data.status === 'pending' || data.point_of_interaction) {
-                    const qrCodeBase64 = data.point_of_interaction.transaction_data.qr_code_base64;
-                    const qrCode = data.point_of_interaction.transaction_data.qr_code;
+                    const qrCodeBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64;
+                    const qrCode = data.point_of_interaction?.transaction_data?.qr_code;
                     currentPixPaymentId = data.id;
+
+                    // 1. Tratamento e Validação Estrita do Payload do PIX (previne código malformado/vazio)
+                    if (!qrCode || typeof qrCode !== 'string' || qrCode.trim().length < 10) {
+                        throw new Error('A chave/código PIX retornado pelo gateway veio vazio ou é inválido. Verifique o cadastro da chave no Mercado Pago.');
+                    }
+                    if (!qrCodeBase64 || typeof qrCodeBase64 !== 'string' || qrCodeBase64.length < 20) {
+                        throw new Error('A imagem do QR Code retornada pela API do Mercado Pago veio corrompida ou vazia.');
+                    }
 
                     if (qrImg) qrImg.src = `data:image/png;base64,${qrCodeBase64}`;
                     if (copiaColaInput) copiaColaInput.value = qrCode;
@@ -9344,7 +9411,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                 }
             } catch (err) {
                 console.error('Erro Mercado Pago PIX:', err);
-                showToast('Erro ao gerar PIX: ' + err.message, true);
+                showToast('⚠️ Falha no PIX: ' + err.message, true);
                 selectStep?.classList.remove('hidden');
                 pixStep?.classList.add('hidden');
             }
@@ -9370,56 +9437,8 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                         pixStatusPollInterval = null;
                     }
 
-                    // Ativar a conta do usuário pelo período escolhido
-                    if (currentUser) {
-                        const uid = currentUser.uid;
-                        const fullPermissions = { canEntry: true, canEdit: true, canDelete: true, canReq: true };
-                        userCustomPermissions = fullPermissions;
-
-                        const addedDays = (selectedPlanMonths || 1) * 30;
-                        const newExpiresAt = new Date(Date.now() + addedDays * 24 * 60 * 60 * 1000).toISOString();
-
-                        // 1. Atualizar no Firestore
-                        try {
-                            const userRef = doc(db, `/artifacts/${appId}/public/data/users`, uid);
-                            await setDoc(userRef, {
-                                aprovado: true,
-                                role: 'operador',
-                                permissions: fullPermissions,
-                                subscriptionActive: true,
-                                subscriptionPaidAt: new Date().toISOString(),
-                                subscriptionExpiresAt: newExpiresAt
-                            }, { merge: true });
-                        } catch (_) {}
-
-                        // 2. Atualizar local
-                        const localUsers = getLocalUsers();
-                        if (localUsers[uid]) {
-                            localUsers[uid].aprovado = true;
-                            localUsers[uid].permissions = fullPermissions;
-                            localUsers[uid].subscriptionExpiresAt = newExpiresAt;
-                            saveLocalUser(uid, localUsers[uid]);
-                        }
-
-                        localStorage.setItem('castilho_sub_paid_at', new Date().toISOString());
-
-                        // Atualizar objeto do usuário atual
-                        currentUser.pendingApproval = false;
-                        currentUser.role = 'operador';
-                        userRole = 'operador';
-                        localStorage.setItem('appUser', JSON.stringify({
-                            ...currentUser,
-                            role: 'operador',
-                            pendingApproval: false,
-                            permissions: fullPermissions,
-                            subscriptionExpiresAt: newExpiresAt
-                        }));
-                    }
-
-                    closePaymentModal();
-                    updateUIBasedOnPermissions();
+                    await activateUserSubscription(selectedPlanMonths || 1, 'PIX Mercado Pago Aprovado');
                     showToast(`🎉 Pagamento APROVADO! Assinatura ativada por +${(selectedPlanMonths || 1) * 30} dias com sucesso!`);
-                    renderAdminPanel();
                 }
             } catch (err) {
                 console.warn('Erro ao verificar status do PIX:', err);
@@ -9450,6 +9469,15 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                     showToast('📋 Código PIX copiado!');
                 });
             }
+        });
+
+        // 🧪 MÓDULO DE TESTE TEMPORÁRIO DE INTEGRAÇÃO (R$ 1,00) - REMOVER EM PRODUÇÃO
+        // Simula a aprovação imediata do pagamento (R$ 1,00 ou qualquer plano) para validação do pós-venda.
+        document.getElementById('test-simulate-approval-btn')?.addEventListener('click', async () => {
+            const months = selectedPlanMonths || 1;
+            const price = selectedPlanPrice || 1.00;
+            await activateUserSubscription(months, `Simulação de Teste Interno (R$ ${price.toFixed(2)})`);
+            showToast(`🧪 Teste de Integração (R$ ${price.toFixed(2)}): Pagamento APROVADO! Acesso liberado por +${months * 30} dias.`);
         });
 
         // Seletor de Período dos Planos (1, 3, 6, 12 meses)
