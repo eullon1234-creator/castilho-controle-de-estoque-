@@ -555,23 +555,15 @@
             const drawerAdminBtn = document.getElementById('drawer-admin-btn');
             if (drawerAdminBtn) drawerAdminBtn.closest('.drawer-btn-wrapper')?.classList.toggle('hidden', !isAdmin);
 
-            // Banner de conta aguardando aprovação com opção de ativar por PIX
+            // Mostrar/ocultar botão de Assinatura no header (SOMENTE para Diego/Admin)
+            const openSubBtn = document.getElementById('open-subscription-modal-btn');
+            if (openSubBtn) openSubBtn.style.display = isAdmin ? '' : 'none';
+
+            // Banner de conta aguardando aprovação (apenas se for admin verificando o sistema)
+            // Funcionários comuns NÃO veem banners de assinatura — isso é responsabilidade do Diego
             const existingBanner = document.getElementById('pending-approval-banner');
             if (existingBanner) existingBanner.remove();
-            if (currentUser?.pendingApproval) {
-                const banner = document.createElement('div');
-                banner.id = 'pending-approval-banner';
-                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#009ee3,#007eb5);color:#fff;text-align:center;padding:10px 16px;font-size:0.82rem;font-weight:700;letter-spacing:0.01em;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 4px 14px rgba(0,158,227,0.3);';
-                banner.innerHTML = `
-                    <span class="material-symbols-outlined" style="font-size:18px;">schedule</span>
-                    <span>Sua conta está <strong>aguardando aprovação</strong>.</span>
-                    <button id="banner-pay-btn" type="button" style="background:#fff;color:#007eb5;border:none;padding:5px 14px;border-radius:8px;font-weight:800;font-size:0.75rem;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);transition:all 0.2s;">
-                        ⚡ Ativar Assinatura a partir de R$ 45,00/mês (PIX)
-                    </button>
-                `;
-                document.body.prepend(banner);
-                document.getElementById('banner-pay-btn')?.addEventListener('click', () => openPaymentModal());
-            }
+            // Banner de assinatura removido para não-admin — somente Diego gerencia a assinatura
 
             createButtons.forEach(btn => {
                 if (btn.id === 'create-requisition-btn') {
