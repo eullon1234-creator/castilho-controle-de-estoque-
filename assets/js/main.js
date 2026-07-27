@@ -9045,11 +9045,6 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                 const isApproved = user.aprovado === true;
                 const createdAt = user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString('pt-BR') : (typeof user.createdAt === 'string' ? new Date(user.createdAt).toLocaleDateString('pt-BR') : '—');
                 
-                // Calcular validade individual do usuário
-                const userExpiresAt = user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                const userDiffMs = userExpiresAt - new Date();
-                const userDaysLeft = Math.max(0, Math.ceil(userDiffMs / (1000 * 60 * 60 * 24)));
-                
                 return `
                 <div class="rounded-2xl border p-4 transition-all" style="background:#fff;border-color:${isApproved ? '#bbf7d0' : '#fde68a'};">
                     <div class="flex items-start justify-between gap-3 mb-3">
@@ -9058,13 +9053,8 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                                 ${(user.displayName || user.id).split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()}
                             </div>
                             <div>
-                                <div class="flex items-center gap-2">
-                                    <p class="font-bold text-sm" style="color:#0f172a;">${user.displayName || user.id}</p>
-                                    <span class="text-[0.7rem] font-extrabold px-2 py-0.5 rounded-md ${userDaysLeft > 5 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
-                                        ⏱️ ${userDaysLeft} dias de acesso
-                                    </span>
-                                </div>
-                                <p class="text-xs" style="color:#64748b;">Cadastrado em ${createdAt} • Validade até ${userExpiresAt.toLocaleDateString('pt-BR')}</p>
+                                <p class="font-bold text-sm" style="color:#0f172a;">${user.displayName || user.id}</p>
+                                <p class="text-xs" style="color:#64748b;">Cadastrado em ${createdAt}</p>
                             </div>
                         </div>
                         <span class="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" style="background:${isApproved ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)'};color:${isApproved ? '#16a34a' : '#d97706'};">
@@ -9105,10 +9095,6 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                         <button class="save-user-perms-btn flex-1 min-w-[160px] py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95" data-uid="${user.id}" style="background:linear-gradient(135deg,#E52320,#dc2626);box-shadow:0 2px 8px rgba(229,35,32,0.25);">
                             <span class="material-symbols-outlined align-middle" style="font-size:16px;">save</span>
                             Salvar Permissões e Aprovar
-                        </button>
-                        <button class="extend-user-days-btn px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1" data-uid="${user.id}" data-name="${user.displayName || user.id}" style="background:rgba(0,158,227,0.08);color:#009ee3;border:1px solid rgba(0,158,227,0.2);" title="Adicionar 30 dias extras de validade">
-                            <span class="material-symbols-outlined" style="font-size:16px;">add_task</span>
-                            <span>+30 Dias</span>
                         </button>
                         <button class="delete-user-account-btn px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1" data-uid="${user.id}" data-name="${user.displayName || user.id}" style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2);" title="Excluir esta conta">
                             <span class="material-symbols-outlined" style="font-size:16px;">delete_forever</span>
