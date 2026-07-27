@@ -4624,13 +4624,13 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                 renderEntryView();
                 setupEntryViewListeners();
             }
-            if (viewId === 'exit-log-view') renderExitLog(exitsSearchInput.value);
+            if (viewId === 'exit-log-view') renderExitLog(exitsSearchInput?.value || '');
             if (viewId === 'activity-log-view') renderActivityLog();
             if (viewId === 'requisitions-view') {
                 reqCurrentPage = 1;
                 renderRequisitions();
             }
-            if (viewId === 'rm-view') renderRMView(rmSearchInput.value); 
+            if (viewId === 'rm-view') renderRMView?.(rmSearchInput?.value || ''); 
             if (viewId === 'dashboard-view') updateDashboard();
             if (viewId === 'tool-loans-view') {
                 renderToolLoanQueue();
