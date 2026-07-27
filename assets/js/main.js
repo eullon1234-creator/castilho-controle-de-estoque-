@@ -9281,25 +9281,31 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         const activateUserSubscription = async (months = 1, paymentMethodName = 'PIX Mercado Pago') => {
             if (!currentUser) return;
             const uid = currentUser.uid;
+
+            // ✅ Preserva o role original do usuário (admin continua admin, operador continua operador)
+            const preservedRole = currentUser.role || userRole || 'operador';
+
             const fullPermissions = { canEntry: true, canEdit: true, canDelete: true, canReq: true };
             userCustomPermissions = fullPermissions;
 
             const addedDays = (months || 1) * 30;
             const newExpiresAt = new Date(Date.now() + addedDays * 24 * 60 * 60 * 1000).toISOString();
 
-            // 1. Atualizar Firestore
-            try {
-                const userRef = doc(db, `/artifacts/${appId}/public/data/users`, uid);
-                await setDoc(userRef, {
-                    aprovado: true,
-                    role: 'operador',
-                    permissions: fullPermissions,
-                    subscriptionActive: true,
-                    subscriptionPaidAt: new Date().toISOString(),
-                    subscriptionExpiresAt: newExpiresAt,
-                    lastPaymentMethod: paymentMethodName
-                }, { merge: true });
-            } catch (_) {}
+            // 1. Atualizar Firestore (apenas para usuários não-admin, pois admin é builtin)
+            if (preservedRole !== 'admin') {
+                try {
+                    const userRef = doc(db, `/artifacts/${appId}/public/data/users`, uid);
+                    await setDoc(userRef, {
+                        aprovado: true,
+                        role: preservedRole,
+                        permissions: fullPermissions,
+                        subscriptionActive: true,
+                        subscriptionPaidAt: new Date().toISOString(),
+                        subscriptionExpiresAt: newExpiresAt,
+                        lastPaymentMethod: paymentMethodName
+                    }, { merge: true });
+                } catch (_) {}
+            }
 
             // 2. Atualizar local
             const localUsers = getLocalUsers();
@@ -9313,13 +9319,13 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             localStorage.setItem('castilho_sub_paid_at', new Date().toISOString());
             localStorage.setItem('castilho_sub_expires_at', newExpiresAt);
 
-            // 3. Atualizar Estado em Memória
+            // 3. Atualizar Estado em Memória (preserva o role original)
             currentUser.pendingApproval = false;
-            currentUser.role = 'operador';
-            userRole = 'operador';
+            currentUser.role = preservedRole;
+            userRole = preservedRole;
             localStorage.setItem('appUser', JSON.stringify({
                 ...currentUser,
-                role: 'operador',
+                role: preservedRole,
                 pendingApproval: false,
                 permissions: fullPermissions,
                 subscriptionExpiresAt: newExpiresAt
