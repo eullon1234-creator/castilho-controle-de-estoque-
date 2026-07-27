@@ -920,10 +920,21 @@
         };
 
         // --- Lógica de Autenticação e Inicialização (sem Firebase Auth) ---
+        const BUILTIN_ADMINS = ['diego', 'admin', 'castilho', 'cartilharia', 'uhe_estrela', 'pch_taboca'];
+
         const savedSession = localStorage.getItem('appUser');
         if (savedSession) {
             try {
                 const customUser = JSON.parse(savedSession);
+
+                // 🔒 Proteção permanente: usuários builtin SEMPRE são admin,
+                // independente do que estiver salvo no localStorage
+                if (BUILTIN_ADMINS.includes(customUser.uid?.toLowerCase())) {
+                    customUser.role = 'admin';
+                    // Corrige o localStorage caso esteja com role errado
+                    localStorage.setItem('appUser', JSON.stringify(customUser));
+                }
+
                 // Restaurar permissões granulares da sessão salva
                 if (customUser.permissions) {
                     userCustomPermissions = customUser.permissions;
