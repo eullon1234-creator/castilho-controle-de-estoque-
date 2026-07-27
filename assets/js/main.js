@@ -555,16 +555,22 @@
             const drawerAdminBtn = document.getElementById('drawer-admin-btn');
             if (drawerAdminBtn) drawerAdminBtn.closest('.drawer-btn-wrapper')?.classList.toggle('hidden', !isAdmin);
 
-            // Banner de conta aguardando aprovação
+            // Banner de conta aguardando aprovação com opção de ativar por PIX
             const existingBanner = document.getElementById('pending-approval-banner');
             if (existingBanner) existingBanner.remove();
             if (currentUser?.pendingApproval) {
-                const appContainer = document.getElementById('app-container');
                 const banner = document.createElement('div');
                 banner.id = 'pending-approval-banner';
-                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#d97706,#f59e0b);color:#fff;text-align:center;padding:10px 16px;font-size:0.82rem;font-weight:700;letter-spacing:0.01em;display:flex;align-items:center;justify-content:center;gap:8px;';
-                banner.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">schedule</span> Sua conta está <strong>aguardando aprovação</strong> do administrador. Você tem acesso apenas de visualização por enquanto.';
+                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#009ee3,#007eb5);color:#fff;text-align:center;padding:10px 16px;font-size:0.82rem;font-weight:700;letter-spacing:0.01em;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 4px 14px rgba(0,158,227,0.3);';
+                banner.innerHTML = `
+                    <span class="material-symbols-outlined" style="font-size:18px;">schedule</span>
+                    <span>Sua conta está <strong>aguardando aprovação</strong>.</span>
+                    <button id="banner-pay-btn" type="button" style="background:#fff;color:#007eb5;border:none;padding:5px 14px;border-radius:8px;font-weight:800;font-size:0.75rem;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);transition:all 0.2s;">
+                        ⚡ Ativar Assinatura por R$ 24,99/mês (PIX)
+                    </button>
+                `;
                 document.body.prepend(banner);
+                document.getElementById('banner-pay-btn')?.addEventListener('click', () => openPaymentModal());
             }
 
             createButtons.forEach(btn => {
@@ -9133,5 +9139,178 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             btn.addEventListener('click', () => {
                 setTimeout(renderAdminPanel, 50);
             });
+        });
+
+        // ───────────────────────────────────────────────
+        // 💳 INTEGRANTE MERCADO PAGO (ASSINATURA R$ 24,99/MÊS)
+        // ───────────────────────────────────────────────
+
+        const MP_PUBLIC_KEY = 'TEST-fa4f6793-f524-4410-a408-87ae5332687b';
+        const MP_ACCESS_TOKEN = 'TEST-4009558881826666-072715-016e77a4df9949059f520b6f4fd57e7f-1006578628';
+        let currentPixPaymentId = null;
+        let pixStatusPollInterval = null;
+
+        const openPaymentModal = () => {
+            const backdrop = document.getElementById('payment-modal-backdrop');
+            const modal = document.getElementById('payment-modal');
+            const selectStep = document.getElementById('payment-step-select');
+            const pixStep = document.getElementById('payment-step-pix');
+            if (!modal) return;
+            backdrop?.classList.remove('hidden');
+            modal?.classList.remove('hidden');
+            selectStep?.classList.remove('hidden');
+            pixStep?.classList.add('hidden');
+        };
+
+        const closePaymentModal = () => {
+            const backdrop = document.getElementById('payment-modal-backdrop');
+            const modal = document.getElementById('payment-modal');
+            if (!modal) return;
+            backdrop?.classList.add('hidden');
+            modal?.classList.add('hidden');
+            if (pixStatusPollInterval) {
+                clearInterval(pixStatusPollInterval);
+                pixStatusPollInterval = null;
+            }
+        };
+
+        const generatePixPayment = async () => {
+            const pixStep = document.getElementById('payment-step-pix');
+            const selectStep = document.getElementById('payment-step-select');
+            const pixLoading = document.getElementById('pix-loading');
+            const pixContent = document.getElementById('pix-content');
+            const qrImg = document.getElementById('pix-qr-image');
+            const copiaColaInput = document.getElementById('pix-copia-cola-input');
+
+            selectStep?.classList.add('hidden');
+            pixStep?.classList.remove('hidden');
+            pixLoading?.classList.remove('hidden');
+            pixContent?.classList.add('hidden');
+
+            try {
+                const userEmail = `${currentUser?.uid || 'cliente'}@castilho.com`;
+                const userName = currentUser?.displayName || 'Cliente Castilho';
+                const response = await fetch('https://api.mercadopago.com/v1/payments', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        transaction_amount: 24.99,
+                        description: 'Assinatura Mensal - Castilho Controle de Estoque',
+                        payment_method_id: 'pix',
+                        payer: {
+                            email: userEmail,
+                            first_name: userName.split(' ')[0] || 'Cliente',
+                            last_name: userName.split(' ').slice(1).join(' ') || 'Castilho'
+                        }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'pending' || data.point_of_interaction) {
+                    const qrCodeBase64 = data.point_of_interaction.transaction_data.qr_code_base64;
+                    const qrCode = data.point_of_interaction.transaction_data.qr_code;
+                    currentPixPaymentId = data.id;
+
+                    if (qrImg) qrImg.src = `data:image/png;base64,${qrCodeBase64}`;
+                    if (copiaColaInput) copiaColaInput.value = qrCode;
+
+                    pixLoading?.classList.add('hidden');
+                    pixContent?.classList.remove('hidden');
+
+                    // Iniciar verificação do status a cada 3 segundos
+                    if (pixStatusPollInterval) clearInterval(pixStatusPollInterval);
+                    pixStatusPollInterval = setInterval(checkPixPaymentStatus, 3000);
+                } else {
+                    throw new Error(data.message || 'Erro ao comunicar com Mercado Pago.');
+                }
+            } catch (err) {
+                console.error('Erro Mercado Pago PIX:', err);
+                showToast('Erro ao gerar PIX: ' + err.message, true);
+                selectStep?.classList.remove('hidden');
+                pixStep?.classList.add('hidden');
+            }
+        };
+
+        const checkPixPaymentStatus = async () => {
+            if (!currentPixPaymentId) return;
+            try {
+                const response = await fetch(`https://api.mercadopago.com/v1/payments/${currentPixPaymentId}`, {
+                    headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+                });
+                const data = await response.json();
+                if (data.status === 'approved') {
+                    if (pixStatusPollInterval) {
+                        clearInterval(pixStatusPollInterval);
+                        pixStatusPollInterval = null;
+                    }
+
+                    // Ativar a conta do usuário
+                    if (currentUser) {
+                        const uid = currentUser.uid;
+                        const fullPermissions = { canEntry: true, canEdit: true, canDelete: true, canReq: true };
+                        userCustomPermissions = fullPermissions;
+
+                        // 1. Atualizar no Firestore
+                        try {
+                            const userRef = doc(db, `/artifacts/${appId}/public/data/users`, uid);
+                            await setDoc(userRef, {
+                                aprovado: true,
+                                role: 'operador',
+                                permissions: fullPermissions,
+                                subscriptionActive: true,
+                                subscriptionPaidAt: new Date().toISOString()
+                            }, { merge: true });
+                        } catch (_) {}
+
+                        // 2. Atualizar local
+                        const localUsers = getLocalUsers();
+                        if (localUsers[uid]) {
+                            localUsers[uid].aprovado = true;
+                            localUsers[uid].permissions = fullPermissions;
+                            saveLocalUser(uid, localUsers[uid]);
+                        }
+
+                        // Atualizar objeto do usuário atual
+                        currentUser.pendingApproval = false;
+                        currentUser.role = 'operador';
+                        userRole = 'operador';
+                        localStorage.setItem('appUser', JSON.stringify({
+                            ...currentUser,
+                            role: 'operador',
+                            pendingApproval: false,
+                            permissions: fullPermissions
+                        }));
+                    }
+
+                    closePaymentModal();
+                    updateUIBasedOnPermissions();
+                    showToast('🎉 Pagamento APROVADO! Sua assinatura R$ 24,99/mês está ativa!');
+                }
+            } catch (err) {
+                console.warn('Erro ao verificar status do PIX:', err);
+            }
+        };
+
+        // Listeners do Modal Mercado Pago
+        document.getElementById('open-subscription-modal-btn')?.addEventListener('click', openPaymentModal);
+        document.getElementById('close-payment-modal-btn')?.addEventListener('click', closePaymentModal);
+        document.getElementById('payment-modal-backdrop')?.addEventListener('click', closePaymentModal);
+        document.getElementById('mp-pay-pix-btn')?.addEventListener('click', generatePixPayment);
+
+        document.getElementById('copy-pix-btn')?.addEventListener('click', () => {
+            const input = document.getElementById('pix-copia-cola-input');
+            if (input && input.value) {
+                navigator.clipboard.writeText(input.value).then(() => {
+                    showToast('📋 Código PIX Copia e Cola copiado!');
+                }).catch(() => {
+                    input.select();
+                    document.execCommand('copy');
+                    showToast('📋 Código PIX copiado!');
+                });
+            }
         });
 
