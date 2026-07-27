@@ -7259,17 +7259,17 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             }
         });
 
-        searchInput.addEventListener('input', debounce(() => {
+        searchInput?.addEventListener('input', debounce(() => {
             currentPage = 1;
             observationCurrentPage = 1;
             refreshInventoryView();
         }, 250));
-        exitsSearchInput.addEventListener('input', debounce((e) => renderExitLog(e.target.value), 250));
+        exitsSearchInput?.addEventListener('input', debounce((e) => renderExitLog(e.target.value), 250));
         activityLogSearchInput?.addEventListener('input', debounce(() => renderActivityLog(), 250));
         activityLogNfInput?.addEventListener('input', debounce(() => renderActivityLog(), 250));
         activityLogSupplierInput?.addEventListener('input', debounce(() => renderActivityLog(), 250));
         activityLogReqInput?.addEventListener('input', debounce(() => renderActivityLog(), 250));
-        rmSearchInput.addEventListener('input', debounce((e) => renderRMView(e.target.value), 250));
+        rmSearchInput?.addEventListener('input', debounce((e) => renderRMView?.(e.target.value), 250));
         toolLoanSearchInput?.addEventListener('input', debounce(populateToolLoanProducts, 250));
         requisitionsSearchInput?.addEventListener('input', debounce(() => {
             reqCurrentPage = 1;
@@ -7280,7 +7280,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             renderRequisitions();
         });
         
-        backupBtn.addEventListener('click', async () => {
+        backupBtn?.addEventListener('click', async () => {
              try {
                 showLoader(true);
                 const backupData = {
@@ -7316,8 +7316,8 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             }
         });
 
-        restoreBtn.addEventListener('click', () => restoreFileInput.click());
-        restoreFileInput.addEventListener('change', (event) => {
+        restoreBtn?.addEventListener('click', () => restoreFileInput?.click());
+        restoreFileInput?.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -8977,7 +8977,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             if (countPending) countPending.textContent = filtered.filter(u => !u.aprovado).length;
             if (countApproved) countApproved.textContent = filtered.filter(u => u.aprovado).length;
 
-            // 💳 Atualizar Card Principal de Status da Assinatura (Mercado Pago R$ 24,99)
+            // 💳 Atualizar Card Principal de Status da Assinatura (Mercado Pago R$ 45,00/mês)
             const daysRemainingEl = document.getElementById('sub-days-remaining');
             const renewalDateEl = document.getElementById('sub-next-renewal-date');
             const statusTextEl = document.getElementById('sub-account-status-text');
@@ -8985,9 +8985,16 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             const progressPercentEl = document.getElementById('sub-progress-percent');
             const statusBadgeEl = document.getElementById('sub-status-badge');
 
-            const paidAtStr = localStorage.getItem('castilho_sub_paid_at') || new Date().toISOString();
-            const startDate = new Date(paidAtStr);
-            const renewalDate = new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+            let renewalDate;
+            if (currentUser?.subscriptionExpiresAt) {
+                renewalDate = new Date(currentUser.subscriptionExpiresAt);
+            } else if (localStorage.getItem('castilho_sub_expires_at')) {
+                renewalDate = new Date(localStorage.getItem('castilho_sub_expires_at'));
+            } else {
+                const paidAtStr = localStorage.getItem('castilho_sub_paid_at') || new Date().toISOString();
+                renewalDate = new Date(new Date(paidAtStr).getTime() + 30 * 24 * 60 * 60 * 1000);
+            }
+
             const now = new Date();
             const diffMs = renewalDate - now;
             const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
@@ -9393,8 +9400,15 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             }
         };
 
-        // Listeners do Modal Mercado Pago
-        document.getElementById('open-subscription-modal-btn')?.addEventListener('click', openPaymentModal);
+        // Delegation Global para Botões de Abrir Modal de Pagamento
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('#admin-renew-pix-btn, #open-subscription-modal-btn, #banner-pay-btn, .open-sub-modal-btn');
+            if (btn) {
+                e.preventDefault();
+                openPaymentModal();
+            }
+        });
+
         document.getElementById('close-payment-modal-btn')?.addEventListener('click', closePaymentModal);
         document.getElementById('payment-modal-backdrop')?.addEventListener('click', closePaymentModal);
         document.getElementById('mp-pay-pix-btn')?.addEventListener('click', generatePixPayment);
