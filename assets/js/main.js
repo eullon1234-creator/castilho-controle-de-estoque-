@@ -8977,6 +8977,42 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             if (countPending) countPending.textContent = filtered.filter(u => !u.aprovado).length;
             if (countApproved) countApproved.textContent = filtered.filter(u => u.aprovado).length;
 
+            // 💳 Atualizar Card Principal de Status da Assinatura (Mercado Pago R$ 24,99)
+            const daysRemainingEl = document.getElementById('sub-days-remaining');
+            const renewalDateEl = document.getElementById('sub-next-renewal-date');
+            const statusTextEl = document.getElementById('sub-account-status-text');
+            const progressBarEl = document.getElementById('sub-progress-bar');
+            const progressPercentEl = document.getElementById('sub-progress-percent');
+            const statusBadgeEl = document.getElementById('sub-status-badge');
+
+            const paidAtStr = localStorage.getItem('castilho_sub_paid_at') || new Date().toISOString();
+            const startDate = new Date(paidAtStr);
+            const renewalDate = new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+            const now = new Date();
+            const diffMs = renewalDate - now;
+            const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+            const percentRemaining = Math.min(100, Math.max(0, Math.round((daysRemaining / 30) * 100)));
+
+            if (daysRemainingEl) daysRemainingEl.innerHTML = `${daysRemaining} Dias Restantes <span class="text-xs font-normal text-emerald-400">(Ciclo 30d)</span>`;
+            if (renewalDateEl) renewalDateEl.textContent = renewalDate.toLocaleDateString('pt-BR');
+            if (statusTextEl) {
+                if (daysRemaining > 5) {
+                    statusTextEl.textContent = 'Regular / Pago';
+                    statusTextEl.className = 'text-xl font-extrabold text-emerald-400 mt-0.5';
+                } else if (daysRemaining > 0) {
+                    statusTextEl.textContent = 'Renovação Próxima';
+                    statusTextEl.className = 'text-xl font-extrabold text-amber-400 mt-0.5';
+                } else {
+                    statusTextEl.textContent = 'Vencido / Renove via PIX';
+                    statusTextEl.className = 'text-xl font-extrabold text-red-400 mt-0.5';
+                }
+            }
+            if (statusBadgeEl) {
+                statusBadgeEl.innerHTML = daysRemaining > 0 ? '🟢 Ativa (Plano Mensal)' : '🔴 Vencida (Renove via PIX)';
+            }
+            if (progressBarEl) progressBarEl.style.width = `${percentRemaining}%`;
+            if (progressPercentEl) progressPercentEl.textContent = `${percentRemaining}% restante`;
+
             // Atualizar badge na nav
             const badge = document.getElementById('nav-admin-badge');
             const pendingCount = filtered.filter(u => !u.aprovado).length;
@@ -8997,6 +9033,12 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                 const perms = user.permissions || {};
                 const isApproved = user.aprovado === true;
                 const createdAt = user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString('pt-BR') : (typeof user.createdAt === 'string' ? new Date(user.createdAt).toLocaleDateString('pt-BR') : '—');
+                
+                // Calcular validade individual do usuário
+                const userExpiresAt = user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                const userDiffMs = userExpiresAt - new Date();
+                const userDaysLeft = Math.max(0, Math.ceil(userDiffMs / (1000 * 60 * 60 * 24)));
+                
                 return `
                 <div class="rounded-2xl border p-4 transition-all" style="background:#fff;border-color:${isApproved ? '#bbf7d0' : '#fde68a'};">
                     <div class="flex items-start justify-between gap-3 mb-3">
@@ -9005,8 +9047,13 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                                 ${(user.displayName || user.id).split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()}
                             </div>
                             <div>
-                                <p class="font-bold text-sm" style="color:#0f172a;">${user.displayName || user.id}</p>
-                                <p class="text-xs" style="color:#64748b;">Cadastrado em ${createdAt}</p>
+                                <div class="flex items-center gap-2">
+                                    <p class="font-bold text-sm" style="color:#0f172a;">${user.displayName || user.id}</p>
+                                    <span class="text-[0.7rem] font-extrabold px-2 py-0.5 rounded-md ${userDaysLeft > 5 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+                                        ⏱️ ${userDaysLeft} dias de acesso
+                                    </span>
+                                </div>
+                                <p class="text-xs" style="color:#64748b;">Cadastrado em ${createdAt} • Validade até ${userExpiresAt.toLocaleDateString('pt-BR')}</p>
                             </div>
                         </div>
                         <span class="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" style="background:${isApproved ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)'};color:${isApproved ? '#16a34a' : '#d97706'};">
@@ -9043,19 +9090,59 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                             </span>
                         </label>
                     </div>
-                    <div class="flex gap-2">
-                        <button class="save-user-perms-btn flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95" data-uid="${user.id}" style="background:linear-gradient(135deg,#E52320,#dc2626);box-shadow:0 2px 8px rgba(229,35,32,0.25);">
+                    <div class="flex flex-wrap gap-2">
+                        <button class="save-user-perms-btn flex-1 min-w-[160px] py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95" data-uid="${user.id}" style="background:linear-gradient(135deg,#E52320,#dc2626);box-shadow:0 2px 8px rgba(229,35,32,0.25);">
                             <span class="material-symbols-outlined align-middle" style="font-size:16px;">save</span>
                             Salvar Permissões e Aprovar
                         </button>
-                        <button class="delete-user-account-btn px-3 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-1" data-uid="${user.id}" data-name="${user.displayName || user.id}" style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2);" title="Excluir esta conta">
-                            <span class="material-symbols-outlined" style="font-size:18px;">delete_forever</span>
-                            <span class="hidden sm:inline">Excluir Conta</span>
+                        <button class="extend-user-days-btn px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1" data-uid="${user.id}" data-name="${user.displayName || user.id}" style="background:rgba(0,158,227,0.08);color:#009ee3;border:1px solid rgba(0,158,227,0.2);" title="Adicionar 30 dias extras de validade">
+                            <span class="material-symbols-outlined" style="font-size:16px;">add_task</span>
+                            <span>+30 Dias</span>
+                        </button>
+                        <button class="delete-user-account-btn px-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1" data-uid="${user.id}" data-name="${user.displayName || user.id}" style="background:rgba(220,38,38,0.08);color:#dc2626;border:1px solid rgba(220,38,38,0.2);" title="Excluir esta conta">
+                            <span class="material-symbols-outlined" style="font-size:16px;">delete_forever</span>
+                            <span class="hidden sm:inline">Excluir</span>
                         </button>
                     </div>
                 </div>`;
             }).join('');
         };
+
+        // Estender +30 Dias para a conta de um usuário (Admin)
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.extend-user-days-btn');
+            if (!btn || userRole !== 'admin') return;
+            const uid = btn.dataset.uid;
+            const name = btn.dataset.name || uid;
+
+            btn.disabled = true;
+            btn.textContent = 'Adicionando...';
+
+            const localUsers = getLocalUsers();
+            const existingUser = localUsers[uid] || {};
+            const currentExpires = existingUser.subscriptionExpiresAt ? new Date(existingUser.subscriptionExpiresAt) : new Date();
+            const baseTime = currentExpires > new Date() ? currentExpires.getTime() : Date.now();
+            const newExpiresAt = new Date(baseTime + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+            const updatedUser = {
+                ...existingUser,
+                aprovado: true,
+                permissions: existingUser.permissions || { canEntry: true, canEdit: true, canDelete: true, canReq: true },
+                subscriptionExpiresAt: newExpiresAt
+            };
+            saveLocalUser(uid, updatedUser);
+
+            try {
+                const userRef = doc(db, `/artifacts/${appId}/public/data/users`, uid);
+                await setDoc(userRef, {
+                    aprovado: true,
+                    subscriptionExpiresAt: newExpiresAt
+                }, { merge: true });
+            } catch (_) {}
+
+            showToast(`✅ Adicionados +30 Dias extras para a conta de "${name}"!`);
+            await renderAdminPanel();
+        });
 
         // Excluir conta de usuário (exclusivo para Diego/Admin)
         document.addEventListener('click', async (e) => {
@@ -9289,6 +9376,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                     closePaymentModal();
                     updateUIBasedOnPermissions();
                     showToast('🎉 Pagamento APROVADO! Sua assinatura R$ 24,99/mês está ativa!');
+                    renderAdminPanel();
                 }
             } catch (err) {
                 console.warn('Erro ao verificar status do PIX:', err);
