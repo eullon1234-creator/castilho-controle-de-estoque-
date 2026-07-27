@@ -9229,13 +9229,15 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         });
 
         // ───────────────────────────────────────────────
-        // 💳 INTEGRANTE MERCADO PAGO (ASSINATURA R$ 24,99/MÊS)
+        // 💳 INTEGRANTE MERCADO PAGO (ASSINATURA E MULTI-PLANOS)
         // ───────────────────────────────────────────────
 
         const MP_PUBLIC_KEY = 'TEST-fa4f6793-f524-4410-a408-87ae5332687b';
         const MP_ACCESS_TOKEN = 'TEST-4009558881826666-072715-016e77a4df9949059f520b6f4fd57e7f-1006578628';
         let currentPixPaymentId = null;
         let pixStatusPollInterval = null;
+        let selectedPlanMonths = 1;
+        let selectedPlanPrice = 24.99;
 
         const openPaymentModal = () => {
             const backdrop = document.getElementById('payment-modal-backdrop');
@@ -9284,8 +9286,8 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        transaction_amount: 24.99,
-                        description: 'Assinatura Mensal - Castilho Controle de Estoque',
+                        transaction_amount: selectedPlanPrice,
+                        description: `Assinatura Castilho - ${selectedPlanMonths} Mês(es)`,
                         payment_method_id: 'pix',
                         payer: {
                             email: userEmail,
@@ -9335,11 +9337,14 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                         pixStatusPollInterval = null;
                     }
 
-                    // Ativar a conta do usuário
+                    // Ativar a conta do usuário pelo período escolhido
                     if (currentUser) {
                         const uid = currentUser.uid;
                         const fullPermissions = { canEntry: true, canEdit: true, canDelete: true, canReq: true };
                         userCustomPermissions = fullPermissions;
+
+                        const addedDays = (selectedPlanMonths || 1) * 30;
+                        const newExpiresAt = new Date(Date.now() + addedDays * 24 * 60 * 60 * 1000).toISOString();
 
                         // 1. Atualizar no Firestore
                         try {
@@ -9349,7 +9354,8 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                                 role: 'operador',
                                 permissions: fullPermissions,
                                 subscriptionActive: true,
-                                subscriptionPaidAt: new Date().toISOString()
+                                subscriptionPaidAt: new Date().toISOString(),
+                                subscriptionExpiresAt: newExpiresAt
                             }, { merge: true });
                         } catch (_) {}
 
@@ -9358,8 +9364,11 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                         if (localUsers[uid]) {
                             localUsers[uid].aprovado = true;
                             localUsers[uid].permissions = fullPermissions;
+                            localUsers[uid].subscriptionExpiresAt = newExpiresAt;
                             saveLocalUser(uid, localUsers[uid]);
                         }
+
+                        localStorage.setItem('castilho_sub_paid_at', new Date().toISOString());
 
                         // Atualizar objeto do usuário atual
                         currentUser.pendingApproval = false;
@@ -9369,13 +9378,14 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                             ...currentUser,
                             role: 'operador',
                             pendingApproval: false,
-                            permissions: fullPermissions
+                            permissions: fullPermissions,
+                            subscriptionExpiresAt: newExpiresAt
                         }));
                     }
 
                     closePaymentModal();
                     updateUIBasedOnPermissions();
-                    showToast('🎉 Pagamento APROVADO! Sua assinatura R$ 24,99/mês está ativa!');
+                    showToast(`🎉 Pagamento APROVADO! Assinatura ativada por +${(selectedPlanMonths || 1) * 30} dias com sucesso!`);
                     renderAdminPanel();
                 }
             } catch (err) {
@@ -9400,5 +9410,24 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                     showToast('📋 Código PIX copiado!');
                 });
             }
+        });
+
+        // Seletor de Período dos Planos (1, 3, 6, 12 meses)
+        document.querySelectorAll('.plan-duration-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.plan-duration-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.style.borderColor = '#e2e8f0';
+                    b.style.background = '#f8fafc';
+                    b.style.boxShadow = 'none';
+                });
+                btn.classList.add('active');
+                btn.style.borderColor = '#009ee3';
+                btn.style.background = 'rgba(0,158,227,0.06)';
+                btn.style.boxShadow = '0 0 0 2px rgba(0,158,227,0.2)';
+
+                selectedPlanMonths = parseInt(btn.dataset.months) || 1;
+                selectedPlanPrice = parseFloat(btn.dataset.price) || 24.99;
+            });
         });
 
