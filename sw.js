@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eullon-app-v1';
+const CACHE_NAME = 'castilho-app-v2.2.0';
 
 // Assets to pre-cache on install for immediate offline fallback
 const PRECACHE_ASSETS = [
@@ -8,6 +8,8 @@ const PRECACHE_ASSETS = [
     './assets/css/tailwind.css',
     './assets/css/main.css',
     './assets/js/main.js',
+    './assets/img/logo-castilho.png',
+    './assets/img/logo-icon.png',
     './assets/icons/icon-192.png',
     './assets/icons/icon-512.png'
 ];
