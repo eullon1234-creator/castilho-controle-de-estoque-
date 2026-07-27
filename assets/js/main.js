@@ -9237,13 +9237,13 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         });
 
         // ───────────────────────────────────────────────
-        // 💳 MERCADO PAGO - CONFIGURAÇÃO E CREDENCIAIS DE API (ISOLADO PARA PRODUÇÃO)
+        // 💳 MERCADO PAGO - CONFIGURAÇÃO E CREDENCIAIS DE API (PRODUÇÃO)
         // ───────────────────────────────────────────────
-        // Insira aqui as credenciais oficiais da Castilho obtidas no Painel de Desenvolvedores:
-        // https://www.mercadopago.com.br/developers/panel/credentials
+        // Credenciais de PRODUÇÃO da Castilho - Mercado Pago
+        // Painel: https://www.mercadopago.com.br/developers/panel/credentials
         const MERCADO_PAGO_CONFIG = {
-            publicKey: 'TEST-fa4f6793-f524-4410-a408-87ae5332687b',
-            accessToken: 'TEST-4009558881826666-072715-016e77a4df9949059f520b6f4fd57e7f-1006578628'
+            publicKey: 'APP_USR-2ffcac4f-964d-487c-9a4f-ac8c0005f77e',
+            accessToken: 'APP_USR-4009558881826666-072715-936fcabd3ce34b4012db466fbf904134-1006578628'
         };
 
         const MP_PUBLIC_KEY = MERCADO_PAGO_CONFIG.publicKey;
