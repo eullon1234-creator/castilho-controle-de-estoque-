@@ -9230,17 +9230,8 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         });
 
         // ───────────────────────────────────────────────
-        // 💳 MERCADO PAGO - CONFIGURAÇÃO E CREDENCIAIS DE API (PRODUÇÃO)
+        // 💳 MERCADO PAGO - CONFIGURAÇÃO MIGROU PARA O BACKEND
         // ───────────────────────────────────────────────
-        // Credenciais de PRODUÇÃO da Castilho - Mercado Pago
-        // Painel: https://www.mercadopago.com.br/developers/panel/credentials
-        const MERCADO_PAGO_CONFIG = {
-            publicKey: 'APP_USR-2ffcac4f-964d-487c-9a4f-ac8c0005f77e',
-            accessToken: 'APP_USR-4009558881826666-072715-936fcabd3ce34b4012db466fbf904134-1006578628'
-        };
-
-        const MP_PUBLIC_KEY = MERCADO_PAGO_CONFIG.publicKey;
-        const MP_ACCESS_TOKEN = MERCADO_PAGO_CONFIG.accessToken;
         let currentPixPaymentId = null;
         let pixStatusPollInterval = null;
         let selectedPlanMonths = 1;
@@ -9395,27 +9386,26 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                 const payload = {
                     transaction_amount: selectedPlanPrice,
                     description: `Assinatura Castilho - ${selectedPlanMonths} Mês(es)`,
-                    payment_method_id: 'pix',
                     payer: {
                         email: userEmail,
                         first_name: userName.split(' ')[0] || 'Cliente',
                         last_name: userName.split(' ').slice(1).join(' ') || 'Castilho'
-                    }
+                    },
+                    external_reference: currentUser?.uid
                 };
 
                 let response;
                 try {
-                    response = await mpApiFetch('/v1/payments', {
+                    response = await fetch('/api/create-pix', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
                             'Content-Type': 'application/json',
                             'X-Idempotency-Key': idempotencyKey
                         },
                         body: JSON.stringify(payload)
                     });
                 } catch (fetchErr) {
-                    throw new Error('Não foi possível conectar com o Mercado Pago: ' + fetchErr.message);
+                    throw new Error('Não foi possível conectar com o Servidor Seguro: ' + fetchErr.message);
                 }
 
                 const data = await response.json();
@@ -9456,9 +9446,7 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         const checkPixPaymentStatus = async () => {
             if (!currentPixPaymentId) return;
             try {
-                const response = await mpApiFetch(`/v1/payments/${currentPixPaymentId}`, {
-                    headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
-                });
+                const response = await fetch(`/api/check-pix?id=${currentPixPaymentId}`);
                 const data = await response.json();
                 if (data.status === 'approved') {
                     if (pixStatusPollInterval) {
@@ -9466,11 +9454,15 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                         pixStatusPollInterval = null;
                     }
 
-                    await activateUserSubscription(selectedPlanMonths || 1, 'PIX Mercado Pago Aprovado');
-                    showToast(`🎉 Pagamento APROVADO! Assinatura ativada por +${(selectedPlanMonths || 1) * 30} dias com sucesso!`);
+                    // Removemos o `activateUserSubscription` daqui porque o webhook do backend 
+                    // vai cuidar disso para evitar fraudes pelo navegador.
+                    showToast(`🎉 Pagamento APROVADO! Sua assinatura foi renovada.`);
+                    
+                    // Atualiza a página para puxar os dados atualizados do banco de dados
+                    setTimeout(() => window.location.reload(), 2000);
                 }
             } catch (err) {
-                console.warn('Erro ao verificar status do PIX:', err);
+                console.warn('Erro ao verificar status do PIX no backend seguro:', err);
             }
         };
 
