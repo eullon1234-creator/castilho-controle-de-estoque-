@@ -8995,7 +8995,11 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             } else if (localStorage.getItem('castilho_sub_expires_at')) {
                 renewalDate = new Date(localStorage.getItem('castilho_sub_expires_at'));
             } else {
-                const paidAtStr = localStorage.getItem('castilho_sub_paid_at') || new Date().toISOString();
+                let paidAtStr = localStorage.getItem('castilho_sub_paid_at');
+                if (!paidAtStr) {
+                    paidAtStr = new Date().toISOString();
+                    localStorage.setItem('castilho_sub_paid_at', paidAtStr);
+                }
                 renewalDate = new Date(new Date(paidAtStr).getTime() + 30 * 24 * 60 * 60 * 1000);
             }
 
