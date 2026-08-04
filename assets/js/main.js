@@ -721,52 +721,90 @@
         const setupSignaturePad = (canvas, clearButton) => {
             if (!canvas) return null;
             if (canvas.dataset.padWired === '1') return null;
+            
             const ctx = canvas.getContext('2d');
-            const W = 560;
-            const H = 160;
-            canvas.width = W;
-            canvas.height = H;
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Tamanho CSS (lógico)
+            const cssW = 560;
+            const cssH = 160;
+            
             canvas.style.width = '100%';
-            canvas.style.maxWidth = '560px';
-            canvas.style.height = '160px';
+            canvas.style.maxWidth = `${cssW}px`;
+            canvas.style.height = `${cssH}px`;
             canvas.style.touchAction = 'none';
+            canvas.style.cursor = 'crosshair';
+            canvas.style.transition = 'border-color 0.2s, box-shadow 0.2s';
+            
+            const rect = canvas.getBoundingClientRect();
+            // Se o canvas ainda não está renderizado, usa o tamanho cssW/cssH
+            const rectW = rect.width || cssW;
+            const rectH = rect.height || cssH;
+            
+            // Tamanho real em pixels (buffer)
+            canvas.width = rectW * dpr;
+            canvas.height = rectH * dpr;
+            
+            // Escala o contexto para trabalhar com coordenadas lógicas 1:1
+            ctx.scale(dpr, dpr);
+            
+            const setContextStyle = () => {
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+            };
+            
+            // Fundo branco inicial
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, W, H);
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 2.25;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            ctx.fillRect(0, 0, rectW, rectH);
+            setContextStyle();
+            
             canvas.dataset.hasInk = '0';
 
             let drawing = false;
+            
             const getPoint = (e) => {
                 const r = canvas.getBoundingClientRect();
                 const t = e.touches && e.touches[0];
                 const clientX = t ? t.clientX : e.clientX;
                 const clientY = t ? t.clientY : e.clientY;
                 return {
-                    x: ((clientX - r.left) / r.width) * canvas.width,
-                    y: ((clientY - r.top) / r.height) * canvas.height
+                    x: clientX - r.left,
+                    y: clientY - r.top
                 };
             };
+            
             const start = (e) => {
                 if (e.cancelable) e.preventDefault();
                 drawing = true;
                 const { x, y } = getPoint(e);
+                setContextStyle(); // Restaura contexto
                 ctx.beginPath();
                 ctx.moveTo(x, y);
+                canvas.style.borderColor = '#3b82f6';
+                canvas.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.12)';
             };
+            
             const move = (e) => {
                 if (!drawing) return;
                 if (e.cancelable) e.preventDefault();
                 const { x, y } = getPoint(e);
                 ctx.lineTo(x, y);
                 ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(x, y);
                 canvas.dataset.hasInk = '1';
             };
-            const end = () => { drawing = false; };
+            
+            const end = () => { 
+                drawing = false; 
+                if (canvas.dataset.hasInk === '1') {
+                    canvas.style.borderColor = '#10b981';
+                    canvas.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
+                } else {
+                    canvas.style.borderColor = '';
+                    canvas.style.boxShadow = '';
+                }
+            };
 
             canvas.addEventListener('mousedown', start);
             canvas.addEventListener('mousemove', move);
@@ -779,9 +817,13 @@
 
             const clear = () => {
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                // Limpa no tamanho real
+                ctx.fillRect(0, 0, rectW, rectH);
                 canvas.dataset.hasInk = '0';
+                canvas.style.borderColor = '';
+                canvas.style.boxShadow = '';
             };
+            
             clearButton?.addEventListener('click', (ev) => {
                 ev.preventDefault();
                 clear();
