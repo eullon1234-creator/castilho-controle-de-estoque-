@@ -8981,8 +8981,128 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
         });
 
         // ───────────────────────────────────────────────
-        // 🛡️ PAINEL DO ADMINISTRADOR
+        // 🛡️ PAINEL DO ADMINISTRADOR & CRONÔMETRO DE ASSINATURA
         // ───────────────────────────────────────────────
+
+        let subTimerInterval = null;
+
+        const startSubscriptionTimer = async () => {
+            if (subTimerInterval) {
+                clearInterval(subTimerInterval);
+                subTimerInterval = null;
+            }
+
+            // 1. Tentar ler Firestore primeiro para garantir sincronização entre dispositivos
+            let sysSub = null;
+            try {
+                const sysDocRef = doc(db, `/artifacts/${appId}/public/data/system`, 'subscription');
+                const sysSnap = await getDoc(sysDocRef);
+                if (sysSnap.exists()) {
+                    sysSub = sysSnap.data();
+                }
+            } catch (err) {
+                console.warn('Erro ao carregar dados globais da assinatura do Firestore:', err);
+            }
+
+            let expiresAtStr = sysSub?.expiresAt || currentUser?.subscriptionExpiresAt || localStorage.getItem('castilho_sub_expires_at');
+            let paidAtStr = sysSub?.paidAt || currentUser?.subscriptionPaidAt || localStorage.getItem('castilho_sub_paid_at');
+
+            const nowIso = new Date().toISOString();
+
+            if (!paidAtStr) {
+                paidAtStr = nowIso;
+                localStorage.setItem('castilho_sub_paid_at', paidAtStr);
+            }
+
+            if (!expiresAtStr) {
+                const paidDate = new Date(paidAtStr);
+                expiresAtStr = new Date(paidDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                localStorage.setItem('castilho_sub_expires_at', expiresAtStr);
+
+                // Gravar no Firestore globalmente
+                try {
+                    const sysDocRef = doc(db, `/artifacts/${appId}/public/data/system`, 'subscription');
+                    await setDoc(sysDocRef, {
+                        active: true,
+                        paidAt: paidAtStr,
+                        expiresAt: expiresAtStr,
+                        updatedAt: nowIso
+                    }, { merge: true });
+                } catch (_) {}
+            }
+
+            const startDate = new Date(paidAtStr);
+            const renewalDate = new Date(expiresAtStr);
+            const totalCycleMs = Math.max(1000, renewalDate.getTime() - startDate.getTime());
+
+            const updateTimerDisplay = () => {
+                const now = new Date();
+                const diffMs = renewalDate.getTime() - now.getTime();
+
+                const timerDaysEl = document.getElementById('sub-timer-days');
+                const timerHoursEl = document.getElementById('sub-timer-hours');
+                const timerMinsEl = document.getElementById('sub-timer-mins');
+                const timerSecsEl = document.getElementById('sub-timer-secs');
+                const activationDateEl = document.getElementById('sub-activation-date');
+                const renewalDateEl = document.getElementById('sub-next-renewal-date');
+                const statusTextEl = document.getElementById('sub-account-status-text');
+                const progressBarEl = document.getElementById('sub-progress-bar');
+                const progressPercentEl = document.getElementById('sub-progress-percent');
+                const statusBadgeEl = document.getElementById('sub-status-badge');
+
+                if (activationDateEl) activationDateEl.textContent = startDate.toLocaleDateString('pt-BR');
+                if (renewalDateEl) renewalDateEl.textContent = renewalDate.toLocaleDateString('pt-BR');
+
+                if (diffMs <= 0) {
+                    if (timerDaysEl) timerDaysEl.textContent = '00';
+                    if (timerHoursEl) timerHoursEl.textContent = '00';
+                    if (timerMinsEl) timerMinsEl.textContent = '00';
+                    if (timerSecsEl) timerSecsEl.textContent = '00';
+                    if (statusTextEl) {
+                        statusTextEl.textContent = 'Vencido / Renove via PIX';
+                        statusTextEl.className = 'text-sm font-extrabold text-red-400 mt-0.5';
+                    }
+                    if (statusBadgeEl) {
+                        statusBadgeEl.innerHTML = '🔴 Vencida (Renove via PIX)';
+                        statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wide bg-red-500/20 text-red-300 border border-red-500/30';
+                    }
+                    if (progressBarEl) progressBarEl.style.width = '0%';
+                    if (progressPercentEl) progressPercentEl.textContent = '0% restante (Vencido)';
+                    return;
+                }
+
+                const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+                if (timerDaysEl) timerDaysEl.textContent = String(days).padStart(2, '0');
+                if (timerHoursEl) timerHoursEl.textContent = String(hours).padStart(2, '0');
+                if (timerMinsEl) timerMinsEl.textContent = String(mins).padStart(2, '0');
+                if (timerSecsEl) timerSecsEl.textContent = String(secs).padStart(2, '0');
+
+                const percentRemaining = Math.max(0, Math.min(100, Math.round((diffMs / totalCycleMs) * 100)));
+                if (progressBarEl) progressBarEl.style.width = `${percentRemaining}%`;
+                if (progressPercentEl) progressPercentEl.textContent = `${percentRemaining}% restante (${days}d ${hours}h ${mins}m)`;
+
+                if (statusTextEl) {
+                    if (days > 5) {
+                        statusTextEl.textContent = 'Regular / Pago';
+                        statusTextEl.className = 'text-sm font-extrabold text-emerald-400 mt-0.5';
+                    } else {
+                        statusTextEl.textContent = 'Renovação Próxima';
+                        statusTextEl.className = 'text-sm font-extrabold text-amber-400 mt-0.5';
+                    }
+                }
+                if (statusBadgeEl) {
+                    statusBadgeEl.innerHTML = '🟢 Ativa (Plano Mensal)';
+                    statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                }
+            };
+
+            updateTimerDisplay();
+            subTimerInterval = setInterval(updateTimerDisplay, 1000);
+        };
 
         const renderAdminPanel = async () => {
             if (userRole !== 'admin') return;
@@ -9023,52 +9143,8 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
             if (countPending) countPending.textContent = filtered.filter(u => !u.aprovado).length;
             if (countApproved) countApproved.textContent = filtered.filter(u => u.aprovado).length;
 
-            // 💳 Atualizar Card Principal de Status da Assinatura (Mercado Pago R$ 45,00/mês)
-            const daysRemainingEl = document.getElementById('sub-days-remaining');
-            const renewalDateEl = document.getElementById('sub-next-renewal-date');
-            const statusTextEl = document.getElementById('sub-account-status-text');
-            const progressBarEl = document.getElementById('sub-progress-bar');
-            const progressPercentEl = document.getElementById('sub-progress-percent');
-            const statusBadgeEl = document.getElementById('sub-status-badge');
-
-            let renewalDate;
-            if (currentUser?.subscriptionExpiresAt) {
-                renewalDate = new Date(currentUser.subscriptionExpiresAt);
-            } else if (localStorage.getItem('castilho_sub_expires_at')) {
-                renewalDate = new Date(localStorage.getItem('castilho_sub_expires_at'));
-            } else {
-                let paidAtStr = localStorage.getItem('castilho_sub_paid_at');
-                if (!paidAtStr) {
-                    paidAtStr = new Date().toISOString();
-                    localStorage.setItem('castilho_sub_paid_at', paidAtStr);
-                }
-                renewalDate = new Date(new Date(paidAtStr).getTime() + 30 * 24 * 60 * 60 * 1000);
-            }
-
-            const now = new Date();
-            const diffMs = renewalDate - now;
-            const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-            const percentRemaining = Math.min(100, Math.max(0, Math.round((daysRemaining / 30) * 100)));
-
-            if (daysRemainingEl) daysRemainingEl.innerHTML = `${daysRemaining} Dias Restantes <span class="text-xs font-normal text-emerald-400">(Ciclo 30d)</span>`;
-            if (renewalDateEl) renewalDateEl.textContent = renewalDate.toLocaleDateString('pt-BR');
-            if (statusTextEl) {
-                if (daysRemaining > 5) {
-                    statusTextEl.textContent = 'Regular / Pago';
-                    statusTextEl.className = 'text-xl font-extrabold text-emerald-400 mt-0.5';
-                } else if (daysRemaining > 0) {
-                    statusTextEl.textContent = 'Renovação Próxima';
-                    statusTextEl.className = 'text-xl font-extrabold text-amber-400 mt-0.5';
-                } else {
-                    statusTextEl.textContent = 'Vencido / Renove via PIX';
-                    statusTextEl.className = 'text-xl font-extrabold text-red-400 mt-0.5';
-                }
-            }
-            if (statusBadgeEl) {
-                statusBadgeEl.innerHTML = daysRemaining > 0 ? '🟢 Ativa (Plano Mensal)' : '🔴 Vencida (Renove via PIX)';
-            }
-            if (progressBarEl) progressBarEl.style.width = `${percentRemaining}%`;
-            if (progressPercentEl) progressPercentEl.textContent = `${percentRemaining}% restante`;
+            // 💳 Iniciar Temporizador em Tempo Real da Assinatura
+            startSubscriptionTimer();
 
             // Atualizar badge na nav
             const badge = document.getElementById('nav-admin-badge');
@@ -9378,6 +9454,18 @@ btn.style.color = isActive ? '#0066FF' : '#6b7280';
                     }, { merge: true });
                 } catch (_) {}
             }
+
+            // Atualizar Firestore Global de Assinatura
+            try {
+                const sysRef = doc(db, `/artifacts/${appId}/public/data/system`, 'subscription');
+                await setDoc(sysRef, {
+                    active: true,
+                    paidAt: new Date().toISOString(),
+                    expiresAt: newExpiresAt,
+                    lastPaymentMethod: paymentMethodName,
+                    updatedBy: uid
+                }, { merge: true });
+            } catch (_) {}
 
             // 2. Atualizar local
             const localUsers = getLocalUsers();
